@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Population served by Municipal Wastewater Systems</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        #chartContainer,
+        #pieChartContainer {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Population served by Municipal Wastewater Systems</h1>
+    <select id="dataDropdown">
+        <!-- Dropdown options will be added dynamically with JavaScript -->
+    </select>
+    <div id="chartContainer"></div>
+    <div id="pieChartContainer"></div>
+
+    <script>
+        // Fetch data from Flask data route
+        async function fetchData() {
+            try {
+                const response = await fetch('/data');
+                return await response.json();
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Populate dropdown with data names
+        async function populateDropdown() {
+            const data = await fetchData();
+            const dropdown = document.getElementById('dataDropdown');
+
+            const columns = Object.keys(data);
+            const dropdownOptions = ["Canada", ...columns.filter(column => column !== "Year" && column !== "Canada")];
+
+            dropdownOptions.forEach(column => {
+                const option = document.createElement('option');
+                option.text = column;
+                option.value = column;
+                dropdown.appendChild(option);
+            });
+
+            // Add event listener to update charts when dropdown option changes
+            dropdown.addEventListener('change', updateCharts);
+
+            // Initialize the charts with the first value in the dropdown
+            updateCharts();
+        }
+
+        // Function to update both the bar chart and pie chart based on the selected dropdown value
+        async function updateCharts() {
+            const selectedValue = document.getElementById('dataDropdown').value;
+
+            // Fetch data from Flask data route (optional if data is already available)
+            const data = await fetchData();
+
+            // Extract labels and values for the bar chart
+            const labels = data["Year"];
+            const values = data[selectedValue];
+
+            // Create the bar chart
+            const chartContainer = document.getElementById('chartContainer');
+            const dataTrace = {
+                type: 'bar',
+                x: labels,
+                y: values,
+            };
+            const layout = {
+                title: `Population served by Municipal Wastewater Systems - ${selectedValue}`,
+                xaxis: { title: 'Year' },
+                yaxis: { title: selectedValue },
+            };
+            Plotly.newPlot(chartContainer, [dataTrace], layout);
+
+            // Extract data for the pie chart by removing year column and Canada Column
+            const pieLabels = Object.keys(data).filter(column => column !== "Year" && column !== "Canada");
+            const pieValues = pieLabels.map(label => data[label][labels.length - 1]); // Used the last year's data for the pie chart
+
+            // Create the pie chart
+            const pieChartContainer = document.getElementById('pieChartContainer');
+            const pieDataTrace = {
+                type: 'pie',
+                labels: pieLabels,
+                values: pieValues,
+            };
+            const pieLayout = {
+                title: 'Pie Chart - Data Distribution',
+            };
+            Plotly.newPlot(pieChartContainer, [pieDataTrace], pieLayout);
+        }
+
+        // Calling the function to populate the dropdown
+        populateDropdown();
+    </script>
+</body>
+
+</html>
